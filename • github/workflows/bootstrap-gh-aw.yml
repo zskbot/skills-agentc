@@ -1,0 +1,43 @@
+name: Bootstrap Agentic Workflows
+
+on:
+  push:
+    branches:
+      - setup/agentic-workflows-bootstrap
+    paths:
+      - .github/workflows/bootstrap-gh-aw.yml
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  initialize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitHub CLI
+        run: |
+          if ! command -v gh >/dev/null 2>&1; then
+            type -p curl >/dev/null || (sudo apt-get update && sudo apt-get install -y curl)
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list >/dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+          fi
+
+      - name: Install gh-aw
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/github/gh-aw/main/install-gh-aw.sh | bash
+          echo "$HOME/.local/share/gh/extensions" >> "$GITHUB_PATH"
+          gh aw version
+
+      - name: Initialize and open setup pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh aw init --create-pull-request --engine copilot --completions
